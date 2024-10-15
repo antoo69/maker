@@ -3,7 +3,6 @@ from telegram.ext import CallbackContext, MessageHandler, Filters, CommandHandle
 import json
 import os
 from database import is_subscription_active
-from .helpers import owner_only
 
 BLACKLIST_USERS_FILE = 'data/blacklist_users.json'
 
@@ -22,8 +21,17 @@ def save_blacklisted_users(users):
 
 blacklisted_users = load_blacklisted_users()
 
-@owner_only
+def is_admin(update: Update) -> bool:
+    user_id = update.effective_user.id
+    chat = update.effective_chat
+    member = chat.get_member(user_id)
+    return member.status in ['administrator', 'creator']
+
 def add_filter_command(update: Update, context: CallbackContext):
+    if not is_admin(update):
+        update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup atau owner bot.")
+        return
+    
     if update.message.reply_to_message:
         # Tambahkan user yang dibalas ke dalam blacklist
         user_id = update.message.reply_to_message.from_user.id
@@ -42,8 +50,11 @@ def add_filter_command(update: Update, context: CallbackContext):
     else:
         update.message.reply_text("Cara penggunaan: /addfilter <user_id> atau balas pesan pengguna.")
 
-@owner_only
 def remove_filter_command(update: Update, context: CallbackContext):
+    if not is_admin(update):
+        update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup atau owner bot.")
+        return
+    
     if update.message.reply_to_message:
         # Hapus user yang dibalas dari blacklist
         user_id = update.message.reply_to_message.from_user.id
