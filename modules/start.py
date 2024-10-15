@@ -21,27 +21,44 @@ START_MODULE_CALLBACK = 'start_module'
 def start_command(update: Update, context: CallbackContext):
     user = update.effective_user
     chat_id = update.effective_chat.id
-    welcome_text = f"Hello {user.first_name}! Saya adalah bot Anti-Gcast."
+    
+    # Periksa apakah obrolan adalah pribadi
+    if update.effective_chat.type == 'private':
+        welcome_text = f"Hello {user.first_name}! Saya adalah bot Anti-Gcast."
 
-    # Buat inline keyboard dengan tambahan tombol "Harga"
-    keyboard = [
-        [InlineKeyboardButton("👤 Owner", callback_data=OWNER_CALLBACK)],
-        [InlineKeyboardButton("📦 Daftar Modul", callback_data=MODULES_CALLBACK)],
-        [InlineKeyboardButton("📢 Channel", callback_data=CHANNEL_CALLBACK)],
-        [InlineKeyboardButton("ℹ️ Tentang Saya", callback_data=ABOUT_CALLBACK)],
-        [InlineKeyboardButton("💰 Harga", callback_data=HARGA_CALLBACK)]  # Tambahkan tombol "Harga"
-    ]
+        # Buat inline keyboard dengan tambahan tombol "Harga"
+        keyboard = [
+            [
+                InlineKeyboardButton("👤 Owner", callback_data=OWNER_CALLBACK),
+                InlineKeyboardButton("📦 Daftar Modul", callback_data=MODULES_CALLBACK)
+            ],
+            [
+                InlineKeyboardButton("📢 Channel", callback_data=CHANNEL_CALLBACK),
+                InlineKeyboardButton("ℹ️ Tentang Saya", callback_data=ABOUT_CALLBACK)
+            ],
+            [
+                InlineKeyboardButton("💰 Harga", callback_data=HARGA_CALLBACK)  # Tambahkan tombol "Harga"
+            ]
+        ]
 
-    reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # Tambahkan status subscription
-    if is_subscription_active(chat_id):
-        welcome_text += "\n\n🔔 **Subscription Aktif**"
+        # Tambahkan status subscription
+        if is_subscription_active(chat_id):
+            welcome_text += "\n\n🔔 **Subscription Aktif**"
+        else:
+            welcome_text += "\n\n⚠️ **Subscription Tidak Aktif**"
+
+        # Kirim pesan dengan inline keyboard
+        update.message.reply_text(welcome_text, reply_markup=reply_markup)
     else:
-        welcome_text += "\n\n⚠️ **Subscription Tidak Aktif**"
-
-    # Kirim pesan dengan inline keyboard
-    update.message.reply_text(welcome_text, reply_markup=reply_markup)
+        # Jika digunakan di grup, tampilkan informasi tentang bot
+        group_info_text = (
+            "ℹ️ **Tentang Bot**\n\n"
+            "Saya adalah bot Anti-Gcast yang membantu mengelola dan melindungi grup Anda dari spam dan penyalahgunaan.\n"
+            "Gunakan perintah `/start` di obrolan pribadi untuk melihat lebih banyak opsi."
+        )
+        update.message.reply_text(group_info_text)
 
 def button_handler(update: Update, context: CallbackContext):
     query = update.callback_query
