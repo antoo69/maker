@@ -70,6 +70,6 @@ def subscription_status(update: Update, context: CallbackContext):
         update.message.reply_text("Anda tidak memiliki subscription aktif.")
 
 def setup(dp):
-    dp.add_handler(CommandHandler("addsub", add_sub_command))
-    dp.add_handler(CommandHandler("removesub", remove_sub_command))
+    dp.add_handler(CommandHandler("addgc", add_sub_command))
+    dp.add_handler(CommandHandler("rmgc", remove_sub_command))
     dp.add_handler(CommandHandler("cek", subscription_status))
