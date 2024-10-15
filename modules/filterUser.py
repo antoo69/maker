@@ -29,7 +29,7 @@ def is_admin(update: Update) -> bool:
 
 def add_filter_command(update: Update, context: CallbackContext):
     if not is_admin(update):
-        update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup atau owner bot.")
+        update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup.")
         return
     
     if update.message.reply_to_message:
@@ -52,7 +52,7 @@ def add_filter_command(update: Update, context: CallbackContext):
 
 def remove_filter_command(update: Update, context: CallbackContext):
     if not is_admin(update):
-        update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup atau owner bot.")
+        update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup.")
         return
     
     if update.message.reply_to_message:
