@@ -3,6 +3,9 @@ from telegram import Update, ParseMode
 from telegram.ext import CallbackContext, CommandHandler, Filters
 from database import is_subscription_active
 
+# Definisikan state untuk percakapan
+TAGGING, = range(1)
+
 # Fungsi untuk memeriksa apakah user adalah admin
 def is_admin(update: Update):
     user_id = update.effective_user.id
@@ -31,8 +34,16 @@ def tag_all(update: Update, context: CallbackContext):
     # Mendapatkan anggota grup dalam batch untuk menghindari pesan yang terlalu panjang
     batch_size = 10  # Tentukan berapa banyak anggota per batch
     mentions = []
+    
+    # Simpan status tagall di konteks
+    context.user_data['tagall_active'] = True
 
     for i in range(members_count):
+        # Cek jika tagall dibatalkan
+        if context.user_data.get('tagall_active') is False:
+            update.message.reply_text("Tagall dibatalkan.")
+            return
+
         member = context.bot.get_chat_member(chat_id, i)
         user = member.user
         if user.username:
@@ -51,5 +62,11 @@ def tag_all(update: Update, context: CallbackContext):
         message = " ".join(mentions)
         update.message.reply_text(f"📣 {message}", parse_mode=ParseMode.MARKDOWN)
 
+def cancel_tagall(update: Update, context: CallbackContext):
+    # Hentikan tagall
+    context.user_data['tagall_active'] = False
+    update.message.reply_text("Tagall dibatalkan.")
+
 def setup(dp):
     dp.add_handler(CommandHandler("tagall", tag_all, Filters.chat_type.groups))
+    dp.add_handler(CommandHandler("cancel", cancel_tagall, Filters.chat_type.groups))
