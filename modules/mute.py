@@ -65,7 +65,15 @@ def check_muted(update: Update, context: CallbackContext):
         except Exception as e:
             print(f"Error deleting message: {e}")
 
+def is_user_admin(update: Update):
+    chat_id = update.effective_chat.id
+    user_id = update.effective_user.id
+
+    # Memeriksa apakah pengguna adalah admin di grup
+    chat_member = update.effective_chat.get_member(user_id)
+    return chat_member.status in ['administrator', 'creator']
+
 def setup(dp):
-    dp.add_handler(CommandHandler("mute", mute_user, Filters.reply & Filters.user.is_admin))
-    dp.add_handler(CommandHandler("unmute", unmute_user, Filters.reply & Filters.user.is_admin))
+    dp.add_handler(CommandHandler("mute", mute_user, Filters.reply & Filters.chat_type.groups & Filters.user(user_id=is_user_admin)))
+    dp.add_handler(CommandHandler("unmute", unmute_user, Filters.reply & Filters.chat_type.groups & Filters.user(user_id=is_user_admin)))
     dp.add_handler(MessageHandler(Filters.all & ~Filters.command, check_muted))
