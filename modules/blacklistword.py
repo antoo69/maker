@@ -1,6 +1,5 @@
-# modules/blacklistword.py
 from telegram import Update
-from telegram.ext import CallbackContext, MessageHandler, Filters
+from telegram.ext import CallbackContext, CommandHandler, MessageHandler, Filters
 import json
 import os
 from database import is_subscription_active
@@ -23,6 +22,22 @@ def save_blacklisted_words(words):
 
 blacklisted_words = load_blacklisted_words()
 
+def add_blacklist_word(update: Update, context: CallbackContext):
+    if update.message.reply_to_message:
+        # Jika membalas pesan, tambahkan kata yang di-reply ke blacklist
+        word = update.message.reply_to_message.text.lower()
+        blacklisted_words.add(word)
+        save_blacklisted_words(blacklisted_words)
+        update.message.reply_text(f"Kata '{word}' telah ditambahkan ke daftar blacklist melalui balasan pesan.")
+    elif context.args:
+        # Jika ada argumen, tambahkan kata dari argumen ke blacklist
+        word = " ".join(context.args).lower()
+        blacklisted_words.add(word)
+        save_blacklisted_words(blacklisted_words)
+        update.message.reply_text(f"Kata '{word}' telah ditambahkan ke daftar blacklist.")
+    else:
+        update.message.reply_text("Cara penggunaan: /bl <kata> atau balas pesan yang mengandung kata tersebut.")
+
 def filter_blacklisted_words(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     if not is_subscription_active(chat_id):
@@ -44,3 +59,4 @@ def filter_blacklisted_words(update: Update, context: CallbackContext):
 
 def setup(dp):
     dp.add_handler(MessageHandler(Filters.text & ~Filters.command, filter_blacklisted_words))
+    dp.add_handler(CommandHandler("bl", add_blacklist_word))
