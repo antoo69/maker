@@ -55,7 +55,7 @@ def start_command(update: Update, context: CallbackContext):
         # Jika digunakan di grup, tampilkan informasi tentang bot
         group_info_text = (
             "ℹ️ **Tentang Bot**\n\n"
-            "Saya adalah bot Anti-Gcast yang membantu mengelola dan melindungi grup Anda dari spam dan penyalahgunaan.\n"
+            "Saya adalah Ferdi Anti-Gcast yang membantu mengelola dan melindungi grup Anda dari spam dan penyalahgunaan.\n"
             "Gunakan perintah `/start` di obrolan pribadi untuk melihat lebih banyak opsi."
         )
         update.message.reply_text(group_info_text)
@@ -67,7 +67,7 @@ def button_handler(update: Update, context: CallbackContext):
     data = query.data
 
     if data == OWNER_CALLBACK:
-        owner_text = "👤 **Owner Bot**\n\nNama: John Doe\nTelegram: [@johndoe](https://t.me/johndoe)"
+        owner_text = "👤 **Owner Bot**\n\nNama: 𝙵𝚎𝚛𝚍𝚒!⁹⁹ ͦɒ͢ԍ⃡яѕ\nTelegram: [@fsyrl9](https://t.me/fsyrl9)"
         query.edit_message_text(text=owner_text, parse_mode='Markdown', disable_web_page_preview=True)
 
     elif data == MODULES_CALLBACK:
@@ -84,38 +84,30 @@ def button_handler(update: Update, context: CallbackContext):
         query.edit_message_text(text="📦 **Daftar Modul**:\nPilih modul untuk melihat cara penggunaan.", reply_markup=reply_markup)
 
     elif data == CHANNEL_CALLBACK:
-        channel_text = "📢 **Channel Bot**\n\nBergabunglah dengan channel resmi kami untuk update terbaru:\n[Join Channel](https://t.me/your_channel_link)"
+        channel_text = "📢 **Channel Bot**\n\nBergabunglah dengan channel resmi kami untuk update terbaru:\n[Join Channel](https://t.me/Galerifsyrl)"
         query.edit_message_text(text=channel_text, parse_mode='Markdown', disable_web_page_preview=True)
 
     elif data == ABOUT_CALLBACK:
-        about_text = "ℹ️ **Tentang Saya**\n\nSaya adalah bot Anti-Gcast yang membantu mengelola dan melindungi grup Anda dari spam dan penyalahgunaan."
+        about_text = "ℹ️ **Tentang Saya**\n\nSaya adalah Ferdi Anti-Gcast yang membantu mengelola dan melindungi grup Anda dari spam dan penyalahgunaan."
         query.edit_message_text(text=about_text, parse_mode='Markdown')
 
     elif data == HARGA_CALLBACK:
         harga_text = (
-            "💰 **Harga Layanan Bot Anti-Gcast**\n\n"
-            "Kami menawarkan beberapa paket layanan untuk memenuhi kebutuhan grup Anda:\n\n"
-            "1. **Paket Basic** - Gratis\n"
-            "   - Fitur dasar anti-gcast\n"
-            "   - Pemantauan pesan secara real-time\n\n"
-            "2. **Paket Premium** - Rp50.000/bulan\n"
-            "   - Semua fitur Basic\n"
-            "   - Fitur mute dan ban otomatis\n"
-            "   - Laporan aktivitas mingguan\n\n"
-            "3. **Paket Enterprise** - Rp150.000/bulan\n"
-            "   - Semua fitur Premium\n"
-            "   - Dukungan prioritas\n"
-            "   - Kustomisasi fitur sesuai kebutuhan grup\n\n"
+            "💰 **Harga Layanan Ferdi Anti-Gcast**\n\n"
+            "Kami menawarkan beberapa Harga murah untuk Anda:\n\n"
+            "1. **Harga 1 Bulan** - Rp25.000 \n"
+            "2. **Harga 3 Bulan** - Rp70.000 \n"
+            "3. **Harga 6 bulan** - Rp130.000 \n"
             "Untuk informasi lebih lanjut atau membeli paket, silakan hubungi [Owner](https://t.me/johndoe)."
         )
         query.edit_message_text(text=harga_text, parse_mode='Markdown', disable_web_page_preview=True)
 
     elif data == FILTER_USER_CALLBACK:
-        filter_user_text = "🔍 **Filter User**\n\nFitur ini memantau dan menghapus pesan dari pengguna yang telah difilter.\n\nCara Penggunaan:\n- Tambahkan pengguna ke dalam filter menggunakan perintah `/addfilter <user_id>`.\n- Hapus pengguna dari filter menggunakan perintah `/removefilter <user_id>`."
+        filter_user_text = "🔍 **Filter User**\n\nFitur ini memantau dan menghapus pesan dari pengguna yang telah difilter.\n\nCara Penggunaan:\n- Tambahkan pengguna ke dalam filter menggunakan perintah `/af <user_id> <reply>`.\n- Hapus pengguna dari filter menggunakan perintah `/rf <user_id>`."
         query.edit_message_text(text=filter_user_text, parse_mode='Markdown')
 
     elif data == BLACKLIST_WORD_CALLBACK:
-        blacklist_word_text = "🚫 **Blacklist Word**\n\nFitur ini memfilter dan menghapus pesan yang mengandung kata-kata yang dilarang.\n\nCara Penggunaan:\n- Tambahkan kata yang ingin diblokir di `blacklist_words.json`."
+        blacklist_word_text = "🚫 **Blacklist Word**\n\nFitur ini memfilter dan menghapus pesan yang mengandung kata-kata yang dilarang.\n\nCara Penggunaan:\n- Tambahkan kata yang ingin diblokir di `blacklist_words.json` perintah `/bl <user_id> <reply>'. \n- `/ul <user_id> <reply>` untuk menghapus dari daftar blacklist
         query.edit_message_text(text=blacklist_word_text, parse_mode='Markdown')
 
     elif data == MUTE_CALLBACK:
