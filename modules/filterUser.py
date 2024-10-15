@@ -37,7 +37,7 @@ def add_filter_command(update: Update, context: CallbackContext):
         user_id = update.message.reply_to_message.from_user.id
         blacklisted_users.add(user_id)
         save_blacklisted_users(blacklisted_users)
-        update.message.reply_text(f"User dengan ID {user_id} telah ditambahkan ke filter melalui balasan pesan.")
+        update.message.reply_text(f"User dengan ID {user_id} Berhasil di tambahkan kedalam database.")
     elif len(context.args) == 1:
         try:
             user_id = int(context.args[0])
@@ -46,9 +46,9 @@ def add_filter_command(update: Update, context: CallbackContext):
             return
         blacklisted_users.add(user_id)
         save_blacklisted_users(blacklisted_users)
-        update.message.reply_text(f"User dengan ID {user_id} telah ditambahkan ke filter.")
+        update.message.reply_text(f"User dengan ID {user_id} Berhasil di tambahkan kedalam database.")
     else:
-        update.message.reply_text("Cara penggunaan: /addfilter <user_id> atau balas pesan pengguna.")
+        update.message.reply_text("Cara penggunaan: /af <user_id> atau balas pesan pengguna.")
 
 def remove_filter_command(update: Update, context: CallbackContext):
     if not is_admin(update):
@@ -60,7 +60,7 @@ def remove_filter_command(update: Update, context: CallbackContext):
         user_id = update.message.reply_to_message.from_user.id
         blacklisted_users.discard(user_id)
         save_blacklisted_users(blacklisted_users)
-        update.message.reply_text(f"User dengan ID {user_id} telah dihapus dari filter melalui balasan pesan.")
+        update.message.reply_text(f"User dengan ID {user_id} Berhasil di keluarkan dari database.")
     elif len(context.args) == 1:
         try:
             user_id = int(context.args[0])
@@ -69,9 +69,9 @@ def remove_filter_command(update: Update, context: CallbackContext):
             return
         blacklisted_users.discard(user_id)
         save_blacklisted_users(blacklisted_users)
-        update.message.reply_text(f"User dengan ID {user_id} telah dihapus dari filter.")
+        update.message.reply_text(f"User dengan ID {user_id} Berhasil di keluarkan dari database.")
     else:
-        update.message.reply_text("Cara penggunaan: /removefilter <user_id> atau balas pesan pengguna.")
+        update.message.reply_text("Cara penggunaan: /rf <user_id> atau balas pesan pengguna.")
 
 def filter_user(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
@@ -87,5 +87,5 @@ def filter_user(update: Update, context: CallbackContext):
 
 def setup(dp):
     dp.add_handler(MessageHandler(Filters.all & ~Filters.command, filter_user))
-    dp.add_handler(CommandHandler("addfilter", add_filter_command))
-    dp.add_handler(CommandHandler("removefilter", remove_filter_command))
+    dp.add_handler(CommandHandler("af", add_filter_command))
+    dp.add_handler(CommandHandler("rf", remove_filter_command))
