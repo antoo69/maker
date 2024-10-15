@@ -9,7 +9,7 @@ import config
 @owner_only
 def add_sub_command(update: Update, context: CallbackContext):
     if len(context.args) != 2:
-        update.message.reply_text("Cara penggunaan: /addsub <chat_id/username> <durasi_hari>")
+        update.message.reply_text("Cara penggunaan: /addgc <chat_id/username> <durasi_hari>")
         return
 
     chat_id_or_username = context.args[0]
@@ -40,7 +40,7 @@ def add_sub_command(update: Update, context: CallbackContext):
 @owner_only
 def remove_sub_command(update: Update, context: CallbackContext):
     if len(context.args) != 1:
-        update.message.reply_text("Cara penggunaan: /removesub <chat_id/username>")
+        update.message.reply_text("Cara penggunaan: /rmgc <chat_id/username>")
         return
 
     chat_id_or_username = context.args[0]
@@ -72,4 +72,4 @@ def subscription_status(update: Update, context: CallbackContext):
 def setup(dp):
     dp.add_handler(CommandHandler("addsub", add_sub_command))
     dp.add_handler(CommandHandler("removesub", remove_sub_command))
-    dp.add_handler(CommandHandler("substatus", subscription_status))
+    dp.add_handler(CommandHandler("cek", subscription_status))
