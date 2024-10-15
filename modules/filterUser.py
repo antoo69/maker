@@ -1,4 +1,3 @@
-# modules/filterUser.py
 from telegram import Update
 from telegram.ext import CallbackContext, MessageHandler, Filters, CommandHandler
 import json
@@ -25,31 +24,43 @@ blacklisted_users = load_blacklisted_users()
 
 @owner_only
 def add_filter_command(update: Update, context: CallbackContext):
-    if len(context.args) != 1:
-        update.message.reply_text("Cara penggunaan: /addfilter <user_id>")
-        return
-    try:
-        user_id = int(context.args[0])
-    except ValueError:
-        update.message.reply_text("User ID harus berupa angka.")
-        return
-    blacklisted_users.add(user_id)
-    save_blacklisted_users(blacklisted_users)
-    update.message.reply_text(f"User dengan ID {user_id} telah ditambahkan ke filter.")
+    if update.message.reply_to_message:
+        # Tambahkan user yang dibalas ke dalam blacklist
+        user_id = update.message.reply_to_message.from_user.id
+        blacklisted_users.add(user_id)
+        save_blacklisted_users(blacklisted_users)
+        update.message.reply_text(f"User dengan ID {user_id} telah ditambahkan ke filter melalui balasan pesan.")
+    elif len(context.args) == 1:
+        try:
+            user_id = int(context.args[0])
+        except ValueError:
+            update.message.reply_text("User ID harus berupa angka.")
+            return
+        blacklisted_users.add(user_id)
+        save_blacklisted_users(blacklisted_users)
+        update.message.reply_text(f"User dengan ID {user_id} telah ditambahkan ke filter.")
+    else:
+        update.message.reply_text("Cara penggunaan: /addfilter <user_id> atau balas pesan pengguna.")
 
 @owner_only
 def remove_filter_command(update: Update, context: CallbackContext):
-    if len(context.args) != 1:
-        update.message.reply_text("Cara penggunaan: /removefilter <user_id>")
-        return
-    try:
-        user_id = int(context.args[0])
-    except ValueError:
-        update.message.reply_text("User ID harus berupa angka.")
-        return
-    blacklisted_users.discard(user_id)
-    save_blacklisted_users(blacklisted_users)
-    update.message.reply_text(f"User dengan ID {user_id} telah dihapus dari filter.")
+    if update.message.reply_to_message:
+        # Hapus user yang dibalas dari blacklist
+        user_id = update.message.reply_to_message.from_user.id
+        blacklisted_users.discard(user_id)
+        save_blacklisted_users(blacklisted_users)
+        update.message.reply_text(f"User dengan ID {user_id} telah dihapus dari filter melalui balasan pesan.")
+    elif len(context.args) == 1:
+        try:
+            user_id = int(context.args[0])
+        except ValueError:
+            update.message.reply_text("User ID harus berupa angka.")
+            return
+        blacklisted_users.discard(user_id)
+        save_blacklisted_users(blacklisted_users)
+        update.message.reply_text(f"User dengan ID {user_id} telah dihapus dari filter.")
+    else:
+        update.message.reply_text("Cara penggunaan: /removefilter <user_id> atau balas pesan pengguna.")
 
 def filter_user(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
