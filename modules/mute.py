@@ -1,79 +1,116 @@
-# modules/mute.py
-from telegram import Update
-from telegram.ext import CallbackContext, CommandHandler, Filters, MessageHandler
-import json
-import os
+from telegram import Update, ChatPermissions
+from telegram.ext import CallbackContext, CommandHandler, Filters
+from datetime import timedelta
 from database import is_subscription_active
+import threading
 
-MUTED_USERS_FILE = 'data/muted_users.json'
+# Fungsi untuk menghapus pesan setelah beberapa detik
+def delete_message_later(context: CallbackContext, message_id: int, chat_id: int, delay: int):
+    threading.Timer(delay, lambda: context.bot.delete_message(chat_id=chat_id, message_id=message_id)).start()
 
-def load_muted_users():
-    if os.path.exists(MUTED_USERS_FILE):
-        with open(MUTED_USERS_FILE, 'r') as f:
-            try:
-                return set(json.load(f))
-            except json.JSONDecodeError:
-                return set()
-    return set()
+# Fungsi untuk mendapatkan user ID berdasarkan username
+def get_user_id_by_username(context: CallbackContext, username: str):
+    try:
+        user = context.bot.get_chat(username)
+        return user.id
+    except Exception as e:
+        return None
 
-def save_muted_users(users):
-    with open(MUTED_USERS_FILE, 'w') as f:
-        json.dump(list(users), f, indent=4)
-
-muted_users = load_muted_users()
-
+# Fungsi untuk membatasi pengguna (mute)
 def mute_user(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
+
     if not is_subscription_active(chat_id):
-        update.message.reply_text("Subscription tidak aktif. Hubungi owner untuk mengaktifkan bot.")
+        msg = update.message.reply_text("Subscription tidak aktif. Hubungi owner untuk mengaktifkan bot.")
+        delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    if not update.message.reply_to_message:
-        update.message.reply_text("Balas pesan pengguna yang ingin dimute.")
+    if not update.effective_user.status in ['administrator', 'creator']:
+        msg = update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup.")
+        delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    user = update.message.reply_to_message.from_user
-    muted_users.add(user.id)
-    save_muted_users(muted_users)
-    update.message.reply_text(f"Pengguna {user.first_name} telah dimute.")
+    # Menggunakan reply atau username/user ID
+    if update.message.reply_to_message:
+        user = update.message.reply_to_message.from_user
+    elif len(context.args) == 1:
+        target = context.args[0]
+        if target.isdigit():
+            user_id = int(target)
+        else:
+            user_id = get_user_id_by_username(context, target)
 
+        if user_id is None:
+            msg = update.message.reply_text("Username atau ID pengguna tidak valid.")
+            delete_message_later(context, msg.message_id, chat_id, 5)
+            return
+        user = context.bot.get_chat(user_id)
+    else:
+        msg = update.message.reply_text("Balas pesan pengguna atau masukkan username/ID pengguna.")
+        delete_message_later(context, msg.message_id, chat_id, 5)
+        return
+
+    # Mute pengguna dengan membatasi semua izin kecuali melihat pesan
+    try:
+        context.bot.restrict_chat_member(
+            chat_id,
+            user.id,
+            ChatPermissions(can_send_messages=False, can_send_media_messages=False, can_send_other_messages=False, can_add_web_page_previews=False)
+        )
+        msg = update.message.reply_text(f"Pengguna {user.first_name} telah dimute.")
+        delete_message_later(context, msg.message_id, chat_id, 5)
+    except Exception as e:
+        msg = update.message.reply_text(f"Gagal memute pengguna: {e}")
+        delete_message_later(context, msg.message_id, chat_id, 5)
+
+# Fungsi untuk mengembalikan izin pengguna (unmute)
 def unmute_user(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
+
     if not is_subscription_active(chat_id):
-        update.message.reply_text("Subscription tidak aktif. Hubungi owner untuk mengaktifkan bot.")
+        msg = update.message.reply_text("Subscription tidak aktif. Hubungi owner untuk mengaktifkan bot.")
+        delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    if not update.message.reply_to_message:
-        update.message.reply_text("Balas pesan pengguna yang ingin di-unmute.")
+    if not update.effective_user.status in ['administrator', 'creator']:
+        msg = update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup.")
+        delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    user = update.message.reply_to_message.from_user
-    muted_users.discard(user.id)
-    save_muted_users(muted_users)
-    update.message.reply_text(f"Pengguna {user.first_name} telah di-unmute.")
+    # Menggunakan reply atau username/user ID
+    if update.message.reply_to_message:
+        user = update.message.reply_to_message.from_user
+    elif len(context.args) == 1:
+        target = context.args[0]
+        if target.isdigit():
+            user_id = int(target)
+        else:
+            user_id = get_user_id_by_username(context, target)
 
-def check_muted(update: Update, context: CallbackContext):
-    chat_id = update.effective_chat.id
-    if not is_subscription_active(chat_id):
+        if user_id is None:
+            msg = update.message.reply_text("Username atau ID pengguna tidak valid.")
+            delete_message_later(context, msg.message_id, chat_id, 5)
+            return
+        user = context.bot.get_chat(user_id)
+    else:
+        msg = update.message.reply_text("Balas pesan pengguna atau masukkan username/ID pengguna.")
+        delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    user_id = update.effective_user.id
-    if user_id in muted_users:
-        try:
-            update.message.delete()
-            update.message.reply_text("Anda telah dimute dan tidak dapat mengirim pesan.")
-        except Exception as e:
-            print(f"Error deleting message: {e}")
+    # Kembalikan izin pengguna (unmute)
+    try:
+        context.bot.restrict_chat_member(
+            chat_id,
+            user.id,
+            ChatPermissions(can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True)
+        )
+        msg = update.message.reply_text(f"Pengguna {user.first_name} telah di-unmute.")
+        delete_message_later(context, msg.message_id, chat_id, 5)
+    except Exception as e:
+        msg = update.message.reply_text(f"Gagal mengunmute pengguna: {e}")
+        delete_message_later(context, msg.message_id, chat_id, 5)
 
-def is_user_admin(update: Update):
-    chat_id = update.effective_chat.id
-    user_id = update.effective_user.id
-
-    # Memeriksa apakah pengguna adalah admin di grup
-    chat_member = update.effective_chat.get_member(user_id)
-    return chat_member.status in ['administrator', 'creator']
-
+# Setup handler untuk mute dan unmute
 def setup(dp):
-    dp.add_handler(CommandHandler("mute", mute_user, Filters.reply & Filters.chat_type.groups & Filters.user(user_id=is_user_admin)))
-    dp.add_handler(CommandHandler("unmute", unmute_user, Filters.reply & Filters.chat_type.groups & Filters.user(user_id=is_user_admin)))
-    dp.add_handler(MessageHandler(Filters.all & ~Filters.command, check_muted))
+    dp.add_handler(CommandHandler("mute", mute_user, Filters.chat_type.groups))
+    dp.add_handler(CommandHandler("unmute", unmute_user, Filters.chat_type.groups))
