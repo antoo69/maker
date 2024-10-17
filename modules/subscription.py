@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from modules.helpers import owner_only
 
-SUBSCRIPTION_FILE = 'data/subcription..db'
+SUBSCRIPTION_FILE = 'data/subscriptions.db'
 
 def load_subscriptions():
     """Memuat daftar langganan dari file."""
@@ -38,10 +38,25 @@ def add_subscription(update: Update, context: CallbackContext):
         update.message.reply_text("Durasi harus berupa angka (jumlah hari).")
         return
 
+    # Ambil informasi grup
+    try:
+        chat = context.bot.get_chat(chat_id)
+        chat_title = chat.title
+    except Exception as e:
+        update.message.reply_text(f"Gagal mendapatkan nama grup: {str(e)}")
+        return
+
+    # Hitung tanggal berakhir langganan
     end_date = (datetime.now() + timedelta(days=duration)).strftime('%Y-%m-%d')
-    subscriptions[chat_id] = end_date
+
+    # Simpan informasi langganan
+    subscriptions[chat_id] = {
+        "name": chat_title,
+        "end_date": end_date
+    }
     save_subscriptions(subscriptions)
-    update.message.reply_text(f"Langganan untuk chat ID {chat_id} berhasil ditambahkan sampai {end_date}.")
+
+    update.message.reply_text(f"Langganan untuk grup '{chat_title}' berhasil ditambahkan sampai {end_date}.")
 
 @owner_only
 def remove_subscription(update: Update, context: CallbackContext):
@@ -65,16 +80,19 @@ def list_subscriptions(update: Update, context: CallbackContext):
         update.message.reply_text("Tidak ada langganan aktif saat ini.")
         return
 
-    message = "Daftar langganan aktif:\n\n"
-    for chat_id, end_date in subscriptions.items():
-        message += f"Chat ID: {chat_id}, Berakhir pada: {end_date}\n"
+    message = "Daftar grup aktif berlangganan:\n\n"
+    for chat_id, info in subscriptions.items():
+        message += f"Nama Grup: {info['name']}\n"
+        message += f"ID Grup: {chat_id}\n"
+        message += f"Berakhir pada: {info['end_date']}\n\n"
+    
     update.message.reply_text(message)
 
 def check_subscription(update: Update, context: CallbackContext):
     """Memeriksa status langganan untuk grup tertentu."""
     chat_id = str(update.effective_chat.id)
     if chat_id in subscriptions:
-        end_date = subscriptions[chat_id]
+        end_date = subscriptions[chat_id]['end_date']
         update.message.reply_text(f"Langganan aktif sampai {end_date}.")
     else:
         update.message.reply_text("Tidak ada langganan aktif untuk grup ini.")
@@ -83,7 +101,7 @@ def is_subscription_active(chat_id):
     """Memeriksa apakah langganan masih aktif."""
     chat_id = str(chat_id)
     if chat_id in subscriptions:
-        end_date = datetime.strptime(subscriptions[chat_id], '%Y-%m-%d')
+        end_date = datetime.strptime(subscriptions[chat_id]['end_date'], '%Y-%m-%d')
         return datetime.now() <= end_date
     return False
 
