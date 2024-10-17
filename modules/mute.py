@@ -4,6 +4,8 @@ from datetime import timedelta
 from database import is_subscription_active
 import threading
 
+MUTED_USERS_FILE = 'config.MUTED_USERS_FILE'
+
 # Fungsi untuk menghapus pesan setelah beberapa detik
 def delete_message_later(context: CallbackContext, message_id: int, chat_id: int, delay: int):
     threading.Timer(delay, lambda: context.bot.delete_message(chat_id=chat_id, message_id=message_id)).start()
