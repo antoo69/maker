@@ -1,113 +1,95 @@
 from telegram import Update
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, CommandHandler
 import json
 import os
-import threading
-from database import is_subscription_active
+from datetime import datetime, timedelta
+from modules.helpers import owner_only
 
-BLACKLIST_USERS_FILE = 'data/blacklist_users.json'
+SUBSCRIPTION_FILE = 'data/subscriptions.json'
 
-def load_blacklisted_users():
-    """Memuat daftar pengguna yang di-blacklist dari file."""
-    if os.path.exists(BLACKLIST_USERS_FILE):
-        with open(BLACKLIST_USERS_FILE, 'r') as f:
+def load_subscriptions():
+    """Memuat daftar langganan dari file."""
+    if os.path.exists(SUBSCRIPTION_FILE):
+        with open(SUBSCRIPTION_FILE, 'r') as f:
             try:
-                return set(json.load(f))
+                return json.load(f)
             except json.JSONDecodeError:
-                return set()
-    return set()
+                return {}
+    return {}
 
-def save_blacklisted_users(users):
-    """Menyimpan daftar pengguna yang di-blacklist ke file."""
-    with open(BLACKLIST_USERS_FILE, 'w') as f:
-        json.dump(list(users), f, indent=4)
+def save_subscriptions(subscriptions):
+    """Menyimpan daftar langganan ke file."""
+    with open(SUBSCRIPTION_FILE, 'w') as f:
+        json.dump(subscriptions, f, indent=4)
 
-blacklisted_users = load_blacklisted_users()
+subscriptions = load_subscriptions()
 
-def is_admin(update: Update) -> bool:
-    """Memeriksa apakah pengguna yang menjalankan perintah adalah admin grup."""
-    user_id = update.effective_user.id
-    chat = update.effective_chat
-    member = chat.get_member(user_id)
-    return member.status in ['administrator', 'creator']
-
-def delete_message_later(context: CallbackContext, message_id: int, chat_id: int, delay: int):
-    """Menghapus pesan setelah jeda waktu tertentu."""
-    threading.Timer(delay, lambda: context.bot.delete_message(chat_id=chat_id, message_id=message_id)).start()
-
-def add_filter_command(update: Update, context: CallbackContext):
-    """Menambahkan pengguna ke blacklist."""
-    if not is_admin(update):
-        msg = update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup.")
-        delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
+@owner_only
+def add_subscription(update: Update, context: CallbackContext):
+    """Menambahkan langganan grup."""
+    if len(context.args) != 2:
+        update.message.reply_text("Penggunaan: /addgc <chat_id> <durasi_dalam_hari>")
         return
 
-    if update.message.reply_to_message:
-        user_id = update.message.reply_to_message.from_user.id
-        blacklisted_users.add(user_id)
-        save_blacklisted_users(blacklisted_users)
-        msg = update.message.reply_text(f"User dengan ID {user_id} berhasil ditambahkan ke dalam blacklist.")
-    elif len(context.args) == 1:
-        try:
-            user_id = int(context.args[0])
-        except ValueError:
-            msg = update.message.reply_text("User ID harus berupa angka.")
-            delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
-            return
-        blacklisted_users.add(user_id)
-        save_blacklisted_users(blacklisted_users)
-        msg = update.message.reply_text(f"User dengan ID {user_id} berhasil ditambahkan ke dalam blacklist.")
+    chat_id = context.args[0]
+    try:
+        duration = int(context.args[1])
+    except ValueError:
+        update.message.reply_text("Durasi harus berupa angka (jumlah hari).")
+        return
+
+    end_date = (datetime.now() + timedelta(days=duration)).strftime('%Y-%m-%d')
+    subscriptions[chat_id] = end_date
+    save_subscriptions(subscriptions)
+    update.message.reply_text(f"Langganan untuk chat ID {chat_id} berhasil ditambahkan sampai {end_date}.")
+
+@owner_only
+def remove_subscription(update: Update, context: CallbackContext):
+    """Menghapus langganan grup."""
+    if len(context.args) != 1:
+        update.message.reply_text("Penggunaan: /rmgc <chat_id>")
+        return
+
+    chat_id = context.args[0]
+    if chat_id in subscriptions:
+        del subscriptions[chat_id]
+        save_subscriptions(subscriptions)
+        update.message.reply_text(f"Langganan untuk chat ID {chat_id} berhasil dihapus.")
     else:
-        msg = update.message.reply_text("Cara penggunaan: /af <user_id> atau balas pesan pengguna.")
-        delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
+        update.message.reply_text(f"Tidak ada langganan aktif untuk chat ID {chat_id}.")
+
+@owner_only
+def list_subscriptions(update: Update, context: CallbackContext):
+    """Menampilkan daftar langganan aktif."""
+    if not subscriptions:
+        update.message.reply_text("Tidak ada langganan aktif saat ini.")
         return
 
-    delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
+    message = "Daftar langganan aktif:\n\n"
+    for chat_id, end_date in subscriptions.items():
+        message += f"Chat ID: {chat_id}, Berakhir pada: {end_date}\n"
+    update.message.reply_text(message)
 
-def remove_filter_command(update: Update, context: CallbackContext):
-    """Menghapus pengguna dari blacklist."""
-    if not is_admin(update):
-        msg = update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup.")
-        delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
-        return
-
-    if update.message.reply_to_message:
-        user_id = update.message.reply_to_message.from_user.id
-        blacklisted_users.discard(user_id)
-        save_blacklisted_users(blacklisted_users)
-        msg = update.message.reply_text(f"User dengan ID {user_id} berhasil dihapus dari blacklist.")
-    elif len(context.args) == 1:
-        try:
-            user_id = int(context.args[0])
-        except ValueError:
-            msg = update.message.reply_text("User ID harus berupa angka.")
-            delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
-            return
-        blacklisted_users.discard(user_id)
-        save_blacklisted_users(blacklisted_users)
-        msg = update.message.reply_text(f"User dengan ID {user_id} berhasil dihapus dari blacklist.")
+def check_subscription(update: Update, context: CallbackContext):
+    """Memeriksa status langganan untuk grup tertentu."""
+    chat_id = str(update.effective_chat.id)
+    if chat_id in subscriptions:
+        end_date = subscriptions[chat_id]
+        update.message.reply_text(f"Langganan aktif sampai {end_date}.")
     else:
-        msg = update.message.reply_text("Cara penggunaan: /rf <user_id> atau balas pesan pengguna.")
-        delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
-        return
+        update.message.reply_text("Tidak ada langganan aktif untuk grup ini.")
 
-    delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
-
-def filter_user(update: Update, context: CallbackContext):
-    """Memfilter pesan dari pengguna yang ada di blacklist."""
-    chat_id = update.effective_chat.id
-    if not is_subscription_active(chat_id):
-        return  # Tidak lakukan apa pun jika subscription tidak aktif
-
-    user_id = update.effective_user.id
-    if user_id in blacklisted_users:
-        try:
-            update.message.delete()  # Menghapus pesan dari pengguna yang di-blacklist
-        except Exception as e:
-            print(f"Error deleting message: {e}")
+def is_subscription_active(chat_id):
+    """Memeriksa apakah langganan masih aktif."""
+    chat_id = str(chat_id)
+    if chat_id in subscriptions:
+        end_date = datetime.strptime(subscriptions[chat_id], '%Y-%m-%d')
+        return datetime.now() <= end_date
+    return False
 
 def setup(dp):
-    """Mendaftarkan handler untuk perintah dan filter."""
-    dp.add_handler(MessageHandler(Filters.all & ~Filters.command, filter_user))
-    dp.add_handler(CommandHandler("af", add_filter_command))  # /af untuk menambahkan blacklist
-    dp.add_handler(CommandHandler("rf", remove_filter_command))  # /rf untuk menghapus blacklist
+    """Mendaftarkan handler untuk perintah subscription."""
+    dp.add_handler(CommandHandler("addgc", add_subscription))
+    dp.add_handler(CommandHandler("rmgc", remove_subscription))
+    dp.add_handler(CommandHandler("listgc", list_subscriptions))
+    dp.add_handler(CommandHandler("cek", check_subscription))
