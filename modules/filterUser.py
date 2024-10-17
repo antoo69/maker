@@ -5,7 +5,7 @@ import os
 import threading
 from database import is_subscription_active
 
-BLACKLIST_USERS_FILE = 'data/blacklist_users.json'
+BLACKLIST_USERS_FILE = 'config.BLACKLIST_USERS_FILE'
 
 def load_blacklisted_users():
     """Memuat daftar pengguna yang di-blacklist dari file."""
