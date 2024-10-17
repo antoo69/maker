@@ -13,6 +13,9 @@ OWNER_ID = int(os.getenv('OWNER_ID'))
 # Menambahkan variabel konfigurasi baru
 DATABASE_FILE = 'data/subscriptions.db'
 BLACKLIST_USERS_FILE = 'data/blacklist_users.json'
+BLACKLIST_WORDS_FILE = 'data/blacklist_words.json'
+MUTED_USERS_FILE = 'data/muted_users.json'
+
 
 # Menambahkan konfigurasi untuk zona waktu
 TIMEZONE = 'Asia/Jakarta'
