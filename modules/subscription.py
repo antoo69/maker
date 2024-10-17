@@ -5,7 +5,7 @@ import os
 from datetime import datetime, timedelta
 from modules.helpers import owner_only
 
-SUBSCRIPTION_FILE = 'data/subscriptions.json'
+SUBSCRIPTION_FILE = 'config.DATABASE_FILE'
 
 def load_subscriptions():
     """Memuat daftar langganan dari file."""
