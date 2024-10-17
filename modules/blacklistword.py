@@ -5,7 +5,7 @@ import os
 from database import is_subscription_active
 from modules import filterUser
 
-BLACKLIST_WORDS_FILE = 'config.BLACKLIST_WORDS_FILE'
+BLACKLIST_WORDS_FILE = 'data/blacklist_words.json'
 
 def load_blacklisted_words():
     if os.path.exists(BLACKLIST_WORDS_FILE):
