@@ -13,8 +13,20 @@ def get_user_id_by_username(context: CallbackContext, username: str):
     try:
         user = context.bot.get_chat(username)
         return user.id
-    except Exception as e:
+    except Exception:
         return None
+
+# Fungsi untuk memeriksa apakah pengguna adalah admin
+def is_admin(update: Update, context: CallbackContext):
+    user = update.effective_user
+    chat = update.effective_chat
+    if chat is None:
+        return False
+    try:
+        member = chat.get_member(user.id)
+        return member.status in ['administrator', 'creator']
+    except Exception:
+        return False
 
 # Fungsi untuk membatasi pengguna (mute)
 def mute_user(update: Update, context: CallbackContext):
@@ -25,7 +37,7 @@ def mute_user(update: Update, context: CallbackContext):
         delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    if not update.effective_user.status in ['administrator', 'creator']:
+    if not is_admin(update, context):
         msg = update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup.")
         delete_message_later(context, msg.message_id, chat_id, 5)
         return
@@ -33,7 +45,7 @@ def mute_user(update: Update, context: CallbackContext):
     # Menggunakan reply atau username/user ID
     if update.message.reply_to_message:
         user = update.message.reply_to_message.from_user
-    elif len(context.args) == 1:
+    elif context.args:
         target = context.args[0]
         if target.isdigit():
             user_id = int(target)
@@ -44,7 +56,12 @@ def mute_user(update: Update, context: CallbackContext):
             msg = update.message.reply_text("Username atau ID pengguna tidak valid.")
             delete_message_later(context, msg.message_id, chat_id, 5)
             return
-        user = context.bot.get_chat(user_id)
+        try:
+            user = context.bot.get_chat(user_id)
+        except Exception:
+            msg = update.message.reply_text("Tidak dapat menemukan pengguna.")
+            delete_message_later(context, msg.message_id, chat_id, 5)
+            return
     else:
         msg = update.message.reply_text("Balas pesan pengguna atau masukkan username/ID pengguna.")
         delete_message_later(context, msg.message_id, chat_id, 5)
@@ -55,12 +72,12 @@ def mute_user(update: Update, context: CallbackContext):
         context.bot.restrict_chat_member(
             chat_id,
             user.id,
-            ChatPermissions(can_send_messages=False, can_send_media_messages=False, can_send_other_messages=False, can_add_web_page_previews=False)
+            permissions=ChatPermissions(can_send_messages=False, can_send_media_messages=False, can_send_other_messages=False, can_add_web_page_previews=False)
         )
         msg = update.message.reply_text(f"Pengguna {user.first_name} telah dimute.")
         delete_message_later(context, msg.message_id, chat_id, 5)
     except Exception as e:
-        msg = update.message.reply_text(f"Gagal memute pengguna: {e}")
+        msg = update.message.reply_text(f"Gagal memute pengguna: {str(e)}")
         delete_message_later(context, msg.message_id, chat_id, 5)
 
 # Fungsi untuk mengembalikan izin pengguna (unmute)
@@ -72,7 +89,7 @@ def unmute_user(update: Update, context: CallbackContext):
         delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    if not update.effective_user.status in ['administrator', 'creator']:
+    if not is_admin(update, context):
         msg = update.message.reply_text("Perintah ini hanya bisa digunakan oleh admin grup.")
         delete_message_later(context, msg.message_id, chat_id, 5)
         return
@@ -80,7 +97,7 @@ def unmute_user(update: Update, context: CallbackContext):
     # Menggunakan reply atau username/user ID
     if update.message.reply_to_message:
         user = update.message.reply_to_message.from_user
-    elif len(context.args) == 1:
+    elif context.args:
         target = context.args[0]
         if target.isdigit():
             user_id = int(target)
@@ -91,7 +108,12 @@ def unmute_user(update: Update, context: CallbackContext):
             msg = update.message.reply_text("Username atau ID pengguna tidak valid.")
             delete_message_later(context, msg.message_id, chat_id, 5)
             return
-        user = context.bot.get_chat(user_id)
+        try:
+            user = context.bot.get_chat(user_id)
+        except Exception:
+            msg = update.message.reply_text("Tidak dapat menemukan pengguna.")
+            delete_message_later(context, msg.message_id, chat_id, 5)
+            return
     else:
         msg = update.message.reply_text("Balas pesan pengguna atau masukkan username/ID pengguna.")
         delete_message_later(context, msg.message_id, chat_id, 5)
@@ -102,15 +124,15 @@ def unmute_user(update: Update, context: CallbackContext):
         context.bot.restrict_chat_member(
             chat_id,
             user.id,
-            ChatPermissions(can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True)
+            permissions=ChatPermissions(can_send_messages=True, can_send_media_messages=True, can_send_other_messages=True, can_add_web_page_previews=True)
         )
         msg = update.message.reply_text(f"Pengguna {user.first_name} telah di-unmute.")
         delete_message_later(context, msg.message_id, chat_id, 5)
     except Exception as e:
-        msg = update.message.reply_text(f"Gagal mengunmute pengguna: {e}")
+        msg = update.message.reply_text(f"Gagal mengunmute pengguna: {str(e)}")
         delete_message_later(context, msg.message_id, chat_id, 5)
 
 # Setup handler untuk mute dan unmute
 def setup(dp):
-    dp.add_handler(CommandHandler("mute", mute_user, Filters.chat_type.groups))
-    dp.add_handler(CommandHandler("unmute", unmute_user, Filters.chat_type.groups))
+    dp.add_handler(CommandHandler("mute", mute_user, filters=Filters.chat_type.groups))
+    dp.add_handler(CommandHandler("unmute", unmute_user, filters=Filters.chat_type.groups))
