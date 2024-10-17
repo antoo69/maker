@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import CallbackContext
+from telegram.ext import CallbackContext, CommandHandler, MessageHandler, Filters
 import json
 import os
 import threading
@@ -28,12 +28,22 @@ def is_admin(update: Update) -> bool:
     """Memeriksa apakah pengguna yang menjalankan perintah adalah admin grup."""
     user_id = update.effective_user.id
     chat = update.effective_chat
-    member = chat.get_member(user_id)
-    return member.status in ['administrator', 'creator']
+    if chat is None:
+        return False
+    try:
+        member = chat.get_member(user_id)
+        return member.status in ['administrator', 'creator']
+    except Exception:
+        return False
 
 def delete_message_later(context: CallbackContext, message_id: int, chat_id: int, delay: int):
     """Menghapus pesan setelah jeda waktu tertentu."""
-    threading.Timer(delay, lambda: context.bot.delete_message(chat_id=chat_id, message_id=message_id)).start()
+    def delete():
+        try:
+            context.bot.delete_message(chat_id=chat_id, message_id=message_id)
+        except Exception:
+            pass
+    threading.Timer(delay, delete).start()
 
 def add_filter_command(update: Update, context: CallbackContext):
     """Menambahkan pengguna ke blacklist."""
@@ -44,9 +54,6 @@ def add_filter_command(update: Update, context: CallbackContext):
 
     if update.message.reply_to_message:
         user_id = update.message.reply_to_message.from_user.id
-        blacklisted_users.add(user_id)
-        save_blacklisted_users(blacklisted_users)
-        msg = update.message.reply_text(f"User dengan ID {user_id} berhasil ditambahkan ke dalam blacklist.")
     elif len(context.args) == 1:
         try:
             user_id = int(context.args[0])
@@ -54,15 +61,14 @@ def add_filter_command(update: Update, context: CallbackContext):
             msg = update.message.reply_text("User ID harus berupa angka.")
             delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
             return
-        blacklisted_users.add(user_id)
-        save_blacklisted_users(blacklisted_users)
-        msg = update.message.reply_text(f"User dengan ID {user_id} berhasil ditambahkan ke dalam blacklist.")
     else:
         msg = update.message.reply_text("Cara penggunaan: /af <user_id> atau balas pesan pengguna.")
         delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
         return
 
-    # Menghapus balasan bot secara otomatis setelah 5 detik
+    blacklisted_users.add(user_id)
+    save_blacklisted_users(blacklisted_users)
+    msg = update.message.reply_text(f"User dengan ID {user_id} berhasil ditambahkan ke dalam blacklist.")
     delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
 
 def remove_filter_command(update: Update, context: CallbackContext):
@@ -74,9 +80,6 @@ def remove_filter_command(update: Update, context: CallbackContext):
 
     if update.message.reply_to_message:
         user_id = update.message.reply_to_message.from_user.id
-        blacklisted_users.discard(user_id)
-        save_blacklisted_users(blacklisted_users)
-        msg = update.message.reply_text(f"User dengan ID {user_id} berhasil dihapus dari blacklist.")
     elif len(context.args) == 1:
         try:
             user_id = int(context.args[0])
@@ -84,32 +87,34 @@ def remove_filter_command(update: Update, context: CallbackContext):
             msg = update.message.reply_text("User ID harus berupa angka.")
             delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
             return
-        blacklisted_users.discard(user_id)
-        save_blacklisted_users(blacklisted_users)
-        msg = update.message.reply_text(f"User dengan ID {user_id} berhasil dihapus dari blacklist.")
     else:
         msg = update.message.reply_text("Cara penggunaan: /rf <user_id> atau balas pesan pengguna.")
         delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
         return
 
-    # Menghapus balasan bot secara otomatis setelah 5 detik
+    if user_id in blacklisted_users:
+        blacklisted_users.remove(user_id)
+        save_blacklisted_users(blacklisted_users)
+        msg = update.message.reply_text(f"User dengan ID {user_id} berhasil dihapus dari blacklist.")
+    else:
+        msg = update.message.reply_text(f"User dengan ID {user_id} tidak ditemukan dalam blacklist.")
     delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
 
 def filter_user(update: Update, context: CallbackContext):
     """Memfilter pesan dari pengguna yang ada di blacklist."""
     chat_id = update.effective_chat.id
     if not is_subscription_active(chat_id):
-        return  # Tidak lakukan apa pun jika subscription tidak aktif
+        return
 
     user_id = update.effective_user.id
     if user_id in blacklisted_users:
         try:
-            update.message.delete()  # Menghapus pesan dari pengguna yang di-blacklist
+            update.message.delete()
         except Exception as e:
             print(f"Error deleting message: {e}")
 
 def setup(dp):
     """Mendaftarkan handler untuk perintah dan filter."""
     dp.add_handler(MessageHandler(Filters.all & ~Filters.command, filter_user))
-    dp.add_handler(CommandHandler("af", add_filter_command))  # /af untuk menambahkan blacklist
-    dp.add_handler(CommandHandler("rf", remove_filter_command))  # /rf untuk menghapus blacklist
+    dp.add_handler(CommandHandler("af", add_filter_command))
+    dp.add_handler(CommandHandler("rf", remove_filter_command))
