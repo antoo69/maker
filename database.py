@@ -1,7 +1,9 @@
 import sqlite3
 from datetime import datetime, timedelta
+import pytz
+import config
 
-DATABASE_FILE = 'data/subscriptions.db'
+DATABASE_FILE = config.DATABASE_FILE
 
 def init_db():
     conn = sqlite3.connect(DATABASE_FILE)
@@ -17,7 +19,7 @@ def init_db():
     conn.close()
 
 def add_subscription(chat_id, buyer_username, duration_days):
-    expiry_date = datetime.now() + timedelta(days=duration_days)
+    expiry_date = datetime.now(pytz.timezone(config.TIMEZONE)) + timedelta(days=duration_days)
     conn = sqlite3.connect(DATABASE_FILE)
     cursor = conn.cursor()
     cursor.execute('''
@@ -45,8 +47,8 @@ def get_subscription(chat_id):
 def is_subscription_active(chat_id):
     subscription = get_subscription(chat_id)
     if subscription:
-        expiry_date = datetime.strptime(subscription[2], '%Y-%m-%d %H:%M:%S')
-        return datetime.now() < expiry_date
+        expiry_date = datetime.strptime(subscription[2], '%Y-%m-%d %H:%M:%S').replace(tzinfo=pytz.timezone(config.TIMEZONE))
+        return datetime.now(pytz.timezone(config.TIMEZONE)) < expiry_date
     return False
 
 def get_all_subscriptions():
