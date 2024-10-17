@@ -1,79 +1,86 @@
 from telegram import Update, ParseMode
 from telegram.ext import CallbackContext, CommandHandler, Filters
 from database import is_subscription_active
-import threading
+import asyncio
 
-# Fungsi untuk menghapus pesan setelah beberapa detik
-def delete_message_later(context: CallbackContext, message_id: int, chat_id: int, delay: int):
-    threading.Timer(delay, lambda: context.bot.delete_message(chat_id=chat_id, message_id=message_id)).start()
+async def delete_message_later(context: CallbackContext, message_id: int, chat_id: int, delay: int):
+    await asyncio.sleep(delay)
+    try:
+        await context.bot.delete_message(chat_id=chat_id, message_id=message_id)
+    except Exception:
+        pass
 
-# Fungsi untuk memeriksa apakah user adalah admin
-def is_admin(update: Update):
-    user_id = update.effective_user.id
-    member = update.effective_chat.get_member(user_id)
-    return member.status in ['administrator', 'creator']
+async def is_admin(update: Update, context: CallbackContext):
+    try:
+        user_id = update.effective_user.id
+        chat_member = await context.bot.get_chat_member(update.effective_chat.id, user_id)
+        return chat_member.status in ['administrator', 'creator']
+    except Exception:
+        return False
 
-def tag_all(update: Update, context: CallbackContext):
+async def tag_all(update: Update, context: CallbackContext):
     chat = update.effective_chat
     chat_id = chat.id
 
-    # Periksa apakah perintah dijalankan di grup atau supergrup
     if chat.type not in ['group', 'supergroup']:
-        msg = update.message.reply_text("Perintah ini hanya dapat digunakan di grup.")
-        delete_message_later(context, msg.message_id, chat_id, 5)
+        msg = await update.message.reply_text("Perintah ini hanya dapat digunakan di grup.")
+        await delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    # Memastikan hanya admin yang bisa menggunakan perintah ini
-    if not is_admin(update):
-        msg = update.message.reply_text("Perintah ini hanya dapat digunakan oleh admin.")
-        delete_message_later(context, msg.message_id, chat_id, 5)
+    if not await is_admin(update, context):
+        msg = await update.message.reply_text("Perintah ini hanya dapat digunakan oleh admin.")
+        await delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    # Periksa status subscription
     if not is_subscription_active(chat_id):
-        msg = update.message.reply_text("Subscription tidak aktif. Hubungi owner untuk mengaktifkan bot.")
-        delete_message_later(context, msg.message_id, chat_id, 5)
+        msg = await update.message.reply_text("Subscription tidak aktif. Hubungi owner untuk mengaktifkan bot.")
+        await delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
-    # Mendapatkan semua anggota grup
-    members = context.bot.get_chat_administrators(chat_id) + context.bot.get_chat_members(chat_id)
-    members = [member.user for member in members]  # Mendapatkan semua pengguna
+    try:
+        members = await context.bot.get_chat_members(chat_id)
+    except Exception as e:
+        await update.message.reply_text(f"Gagal mendapatkan daftar anggota: {str(e)}")
+        return
 
-    # Batasi batch untuk menghindari pesan yang terlalu panjang (max 4096 karakter per pesan)
-    batch_size = 10
+    batch_size = 5
     mentions = []
     
-    # Mulai proses tagall
-    update.message.reply_text(f"Memulai tagall di grup: {chat.title} (Total anggota: {len(members)})")
+    await update.message.reply_text(f"Memulai tagall di grup: {chat.title} (Total anggota: {len(members)})")
 
     for member in members:
         if context.user_data.get('tagall_active') is False:
-            update.message.reply_text("Tagall dibatalkan.")
+            await update.message.reply_text("Tagall dibatalkan.")
             return
 
-        if member.username:
-            mentions.append(f"@{member.username}")
+        user = member.user
+        if user.username:
+            mentions.append(f"@{user.username}")
         else:
-            mentions.append(f"[{member.first_name}](tg://user?id={member.id})")  # Mention menggunakan nama depan jika tidak ada username
+            mentions.append(f"[{user.first_name}](tg://user?id={user.id})")
 
-        # Kirim dalam batch setelah jumlah mentions mencapai batas
         if len(mentions) == batch_size:
             message = " ".join(mentions)
-            update.message.reply_text(f"📣 {message}", parse_mode=ParseMode.MARKDOWN)
+            try:
+                await update.message.reply_text(f"📣 {message}", parse_mode=ParseMode.MARKDOWN)
+            except Exception:
+                await update.message.reply_text("Gagal mengirim pesan mention.")
             mentions = []
+            await asyncio.sleep(1)  # Delay untuk menghindari flood
 
-    # Kirim sisa mentions jika ada
     if mentions:
         message = " ".join(mentions)
-        update.message.reply_text(f"📣 {message}", parse_mode=ParseMode.MARKDOWN)
+        try:
+            await update.message.reply_text(f"📣 {message}", parse_mode=ParseMode.MARKDOWN)
+        except Exception:
+            await update.message.reply_text("Gagal mengirim pesan mention terakhir.")
 
-    update.message.reply_text("Tagall selesai.")
+    await update.message.reply_text("Tagall selesai.")
 
-def cancel_tagall(update: Update, context: CallbackContext):
-    # Hentikan tagall
+async def cancel_tagall(update: Update, context: CallbackContext):
     context.user_data['tagall_active'] = False
-    msg = update.message.reply_text("Tagall dibatalkan.")
-    delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
+    msg = await update.message.reply_text("Tagall dibatalkan.")
+    await delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
 
 def setup(dp):
     dp.add_handler(CommandHandler("tagall", tag_all, Filters.chat_type.groups))
