@@ -1,2 +1,2 @@
-TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
-OWNER_ID = 123456789  # Ganti dengan ID Telegram owner
+TOKEN = '7696179651:AAHKlvY1xYz_F14QPv3DcVqJYgBcWUj4MTQ'
+OWNER_ID = 1506963557  # Ganti dengan ID Telegram owner
