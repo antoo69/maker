@@ -1,7 +1,9 @@
 from telegram import Update, ParseMode
 from telegram.ext import CallbackContext, CommandHandler, Filters
-from database import is_subscription_active
 import asyncio
+
+# Variabel untuk menyimpan status tagall aktif
+tagall_active = False
 
 async def delete_message_later(context: CallbackContext, message_id: int, chat_id: int, delay: int):
     await asyncio.sleep(delay)
@@ -10,15 +12,10 @@ async def delete_message_later(context: CallbackContext, message_id: int, chat_i
     except Exception:
         pass
 
-async def is_admin(update: Update, context: CallbackContext):
-    try:
-        user_id = update.effective_user.id
-        chat_member = await context.bot.get_chat_member(update.effective_chat.id, user_id)
-        return chat_member.status in ['administrator', 'creator']
-    except Exception:
-        return False
-
 async def tag_all(update: Update, context: CallbackContext):
+    global tagall_active
+    tagall_active = True
+
     chat = update.effective_chat
     chat_id = chat.id
 
@@ -29,11 +26,6 @@ async def tag_all(update: Update, context: CallbackContext):
 
     if not await is_admin(update, context):
         msg = await update.message.reply_text("Perintah ini hanya dapat digunakan oleh admin.")
-        await delete_message_later(context, msg.message_id, chat_id, 5)
-        return
-
-    if not is_subscription_active(chat_id):
-        msg = await update.message.reply_text("Subscription tidak aktif. Hubungi owner untuk mengaktifkan bot.")
         await delete_message_later(context, msg.message_id, chat_id, 5)
         return
 
@@ -49,7 +41,7 @@ async def tag_all(update: Update, context: CallbackContext):
     await update.message.reply_text(f"Memulai tagall di grup: {chat.title} (Total anggota: {len(members)})")
 
     for member in members:
-        if context.user_data.get('tagall_active') is False:
+        if not tagall_active:
             await update.message.reply_text("Tagall dibatalkan.")
             return
 
@@ -78,10 +70,19 @@ async def tag_all(update: Update, context: CallbackContext):
     await update.message.reply_text("Tagall selesai.")
 
 async def cancel_tagall(update: Update, context: CallbackContext):
-    context.user_data['tagall_active'] = False
+    global tagall_active
+    tagall_active = False
     msg = await update.message.reply_text("Tagall dibatalkan.")
     await delete_message_later(context, msg.message_id, update.effective_chat.id, 5)
 
+async def is_admin(update: Update, context: CallbackContext):
+    try:
+        user_id = update.effective_user.id
+        chat_member = await context.bot.get_chat_member(update.effective_chat.id, user_id)
+        return chat_member.status in ['administrator', 'creator']
+    except Exception:
+        return False
+
 def setup(dp):
     dp.add_handler(CommandHandler("tagall", tag_all, Filters.chat_type.groups))
-    dp.add_handler(CommandHandler("cancel", cancel_tagall, Filters.chat_type.groups))
+    dp.add_handler(CommandHandler("cancel_tagall", cancel_tagall, Filters.chat_type.groups))
