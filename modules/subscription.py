@@ -1,14 +1,14 @@
-from telegram import Update
-from telegram.ext import CallbackContext, CommandHandler
 import json
 import os
 from datetime import datetime, timedelta
+from telegram import Update
+from telegram.ext import CallbackContext, CommandHandler
 from modules.helpers import owner_only
 
-SUBSCRIPTION_FILE = 'data/subscriptions.db'
+SUBSCRIPTION_FILE = 'data/subscription.json'  # Nama file untuk menyimpan data subscription
 
+# Fungsi untuk memuat langganan dari file
 def load_subscriptions():
-    """Memuat daftar langganan dari file."""
     if os.path.exists(SUBSCRIPTION_FILE):
         with open(SUBSCRIPTION_FILE, 'r') as f:
             try:
@@ -17,16 +17,17 @@ def load_subscriptions():
                 return {}
     return {}
 
+# Fungsi untuk menyimpan langganan ke file
 def save_subscriptions(subscriptions):
-    """Menyimpan daftar langganan ke file."""
     with open(SUBSCRIPTION_FILE, 'w') as f:
         json.dump(subscriptions, f, indent=4)
 
+# Memuat langganan saat bot dijalankan
 subscriptions = load_subscriptions()
 
 @owner_only
 def add_subscription(update: Update, context: CallbackContext):
-    """Menambahkan langganan grup."""
+    """Menambahkan langganan untuk grup."""
     if len(context.args) != 2:
         update.message.reply_text("Penggunaan: /addgc <chat_id> <durasi_dalam_hari>")
         return
@@ -38,25 +39,13 @@ def add_subscription(update: Update, context: CallbackContext):
         update.message.reply_text("Durasi harus berupa angka (jumlah hari).")
         return
 
-    # Ambil informasi grup
-    try:
-        chat = context.bot.get_chat(chat_id)
-        chat_title = chat.title
-    except Exception as e:
-        update.message.reply_text(f"Gagal mendapatkan nama grup: {str(e)}")
-        return
-
-    # Hitung tanggal berakhir langganan
     end_date = (datetime.now() + timedelta(days=duration)).strftime('%Y-%m-%d')
-
-    # Simpan informasi langganan
     subscriptions[chat_id] = {
-        "name": chat_title,
+        "group_name": update.message.chat.title,
         "end_date": end_date
     }
     save_subscriptions(subscriptions)
-
-    update.message.reply_text(f"Langganan untuk grup '{chat_title}' berhasil ditambahkan sampai {end_date}.")
+    update.message.reply_text(f"Langganan untuk grup '{update.message.chat.title}' (ID: {chat_id}) berhasil ditambahkan sampai {end_date}.")
 
 @owner_only
 def remove_subscription(update: Update, context: CallbackContext):
@@ -80,19 +69,19 @@ def list_subscriptions(update: Update, context: CallbackContext):
         update.message.reply_text("Tidak ada langganan aktif saat ini.")
         return
 
-    message = "Daftar grup aktif berlangganan:\n\n"
+    message = "Daftar grup yang berlangganan:\n\n"
     for chat_id, info in subscriptions.items():
-        message += f"Nama Grup: {info['name']}\n"
-        message += f"ID Grup: {chat_id}\n"
-        message += f"Berakhir pada: {info['end_date']}\n\n"
-    
+        group_name = info.get("group_name", "Nama tidak tersedia")
+        end_date = info.get("end_date", "Tanggal tidak tersedia")
+        message += f"NAMA: {group_name}\nID GROUP: {chat_id}\nBERLANGGANAN HINGGA: {end_date}\n\n"
+
     update.message.reply_text(message)
 
 def check_subscription(update: Update, context: CallbackContext):
     """Memeriksa status langganan untuk grup tertentu."""
     chat_id = str(update.effective_chat.id)
     if chat_id in subscriptions:
-        end_date = subscriptions[chat_id]['end_date']
+        end_date = subscriptions[chat_id]["end_date"]
         update.message.reply_text(f"Langganan aktif sampai {end_date}.")
     else:
         update.message.reply_text("Tidak ada langganan aktif untuk grup ini.")
@@ -101,7 +90,7 @@ def is_subscription_active(chat_id):
     """Memeriksa apakah langganan masih aktif."""
     chat_id = str(chat_id)
     if chat_id in subscriptions:
-        end_date = datetime.strptime(subscriptions[chat_id]['end_date'], '%Y-%m-%d')
+        end_date = datetime.strptime(subscriptions[chat_id]["end_date"], '%Y-%m-%d')
         return datetime.now() <= end_date
     return False
 
