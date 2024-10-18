@@ -1,22 +1,19 @@
 from telegram.ext import Updater
-from modules import filterUser, blacklistword, mute, antiflood, tagall, subscription
-from helpers import owner_only
+from modules import setup_all_handlers
 import config
 
 def main():
-    updater = Updater(token=config.TOKEN, use_context=True)
+    # Buat updater dan dispatcher menggunakan token bot dari config.py
+    updater = Updater(token=config.BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
 
-    # Daftarkan semua modul
-    filterUser.setup(dp)
-    blacklistword.setup(dp)
-    mute.setup(dp)
-    antiflood.setup(dp)
-    tagall.setup(dp)
-    subscription.setup(dp)
+    # Panggil fungsi setup_all_handlers dari modules/__init__.py
+    setup_all_handlers(dp)
 
-    # Mulai bot
+    # Mulai polling untuk menerima pesan dari Telegram
     updater.start_polling()
+
+    # Berhenti hanya jika ada perintah manual untuk stop bot
     updater.idle()
 
 if __name__ == '__main__':
