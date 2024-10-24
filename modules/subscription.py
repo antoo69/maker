@@ -1,102 +1,75 @@
-import json
-import os
+# modules/subscription.py
+from telegram import Update, ParseMode
+from telegram.ext import CallbackContext, CommandHandler, Filters
+from database import add_subscription, remove_subscription, is_subscription_active, get_subscription
 from datetime import datetime, timedelta
-from telegram import Update
-from telegram.ext import CallbackContext, CommandHandler
-from modules.helpers import owner_only
-
-SUBSCRIPTION_FILE = 'data/subscription.json'  # Nama file untuk menyimpan data subscription
-
-# Fungsi untuk memuat langganan dari file
-def load_subscriptions():
-    if os.path.exists(SUBSCRIPTION_FILE):
-        with open(SUBSCRIPTION_FILE, 'r') as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                return {}
-    return {}
-
-# Fungsi untuk menyimpan langganan ke file
-def save_subscriptions(subscriptions):
-    with open(SUBSCRIPTION_FILE, 'w') as f:
-        json.dump(subscriptions, f, indent=4)
-
-# Memuat langganan saat bot dijalankan
-subscriptions = load_subscriptions()
+from .helpers import owner_only
+import config
 
 @owner_only
-def add_subscription(update: Update, context: CallbackContext):
-    """Menambahkan langganan untuk grup."""
+def add_sub_command(update: Update, context: CallbackContext):
     if len(context.args) != 2:
-        update.message.reply_text("Penggunaan: /addgc <chat_id> <durasi_dalam_hari>")
+        update.message.reply_text("Cara penggunaan: /addsub <chat_id/username> <durasi_hari>")
         return
 
-    chat_id = context.args[0]
-    try:
-        duration = int(context.args[1])
-    except ValueError:
-        update.message.reply_text("Durasi harus berupa angka (jumlah hari).")
-        return
+    chat_id_or_username = context.args[0]
+    duration_days = int(context.args[1])
 
-    end_date = (datetime.now() + timedelta(days=duration)).strftime('%Y-%m-%d')
-    subscriptions[chat_id] = {
-        "group_name": update.message.chat.title,
-        "end_date": end_date
-    }
-    save_subscriptions(subscriptions)
-    update.message.reply_text(f"Langganan untuk grup '{update.message.chat.title}' (ID: {chat_id}) berhasil ditambahkan sampai {end_date}.")
+    # Cek apakah argumen pertama adalah username atau chat_id
+    if chat_id_or_username.isdigit():
+        chat_id = int(chat_id_or_username)
+    else:
+        # Jika menggunakan username, cari chat_id
+        try:
+            user = context.bot.get_chat(chat_id_or_username)
+            chat_id = user.id
+        except Exception as e:
+            update.message.reply_text("Chat ID atau username tidak valid.")
+            return
+
+    buyer_username = f"@{update.message.from_user.username}" if update.message.from_user.username else "Unknown"
+
+    # Menambahkan langganan dengan durasi yang diberikan
+    add_subscription(chat_id, buyer_username, duration_days)
+
+    # Hitung tanggal kedaluwarsa
+    expiry_date = datetime.now() + timedelta(days=duration_days)
+    update.message.reply_text(f"Subscription ditambahkan untuk chat ID {chat_id} selama {duration_days} hari.\n"
+                              f"Group ini masih memiliki durasi {duration_days} hari dan akan habis pada tanggal {expiry_date.strftime('%Y-%m-%d %H:%M:%S')}.")
 
 @owner_only
-def remove_subscription(update: Update, context: CallbackContext):
-    """Menghapus langganan grup."""
+def remove_sub_command(update: Update, context: CallbackContext):
     if len(context.args) != 1:
-        update.message.reply_text("Penggunaan: /rmgc <chat_id>")
+        update.message.reply_text("Cara penggunaan: /removesub <chat_id/username>")
         return
 
-    chat_id = context.args[0]
-    if chat_id in subscriptions:
-        del subscriptions[chat_id]
-        save_subscriptions(subscriptions)
-        update.message.reply_text(f"Langganan untuk chat ID {chat_id} berhasil dihapus.")
+    chat_id_or_username = context.args[0]
+
+    # Cek apakah argumen pertama adalah username atau chat_id
+    if chat_id_or_username.isdigit():
+        chat_id = int(chat_id_or_username)
     else:
-        update.message.reply_text(f"Tidak ada langganan aktif untuk chat ID {chat_id}.")
+        try:
+            user = context.bot.get_chat(chat_id_or_username)
+            chat_id = user.id
+        except Exception as e:
+            update.message.reply_text("Chat ID atau username tidak valid.")
+            return
 
-@owner_only
-def list_subscriptions(update: Update, context: CallbackContext):
-    """Menampilkan daftar langganan aktif."""
-    if not subscriptions:
-        update.message.reply_text("Tidak ada langganan aktif saat ini.")
-        return
+    remove_subscription(chat_id)
+    update.message.reply_text(f"Subscription dihapus untuk chat ID {chat_id}.")
 
-    message = "Daftar grup yang berlangganan:\n\n"
-    for chat_id, info in subscriptions.items():
-        group_name = info.get("group_name", "Nama tidak tersedia")
-        end_date = info.get("end_date", "Tanggal tidak tersedia")
-        message += f"NAMA: {group_name}\nID GROUP: {chat_id}\nBERLANGGANAN HINGGA: {end_date}\n\n"
-
-    update.message.reply_text(message)
-
-def check_subscription(update: Update, context: CallbackContext):
-    """Memeriksa status langganan untuk grup tertentu."""
-    chat_id = str(update.effective_chat.id)
-    if chat_id in subscriptions:
-        end_date = subscriptions[chat_id]["end_date"]
-        update.message.reply_text(f"Langganan aktif sampai {end_date}.")
+def subscription_status(update: Update, context: CallbackContext):
+    chat_id = update.effective_chat.id
+    subscription = get_subscription(chat_id)
+    if subscription:
+        expiry_date = subscription[2]
+        remaining_days = (expiry_date - datetime.now()).days
+        update.message.reply_text(f"Subscription Anda masih memiliki durasi {remaining_days} hari dan akan habis pada tanggal {expiry_date.strftime('%Y-%m-%d %H:%M:%S')}.")
     else:
-        update.message.reply_text("Tidak ada langganan aktif untuk grup ini.")
-
-def is_subscription_active(chat_id):
-    """Memeriksa apakah langganan masih aktif."""
-    chat_id = str(chat_id)
-    if chat_id in subscriptions:
-        end_date = datetime.strptime(subscriptions[chat_id]["end_date"], '%Y-%m-%d')
-        return datetime.now() <= end_date
-    return False
+        update.message.reply_text("Anda tidak memiliki subscription aktif.")
 
 def setup(dp):
-    """Mendaftarkan handler untuk perintah subscription."""
-    dp.add_handler(CommandHandler("addgc", add_subscription))
-    dp.add_handler(CommandHandler("rmgc", remove_subscription))
-    dp.add_handler(CommandHandler("listgc", list_subscriptions))
-    dp.add_handler(CommandHandler("cek", check_subscription))
+    dp.add_handler(CommandHandler("addsub", add_sub_command))
+    dp.add_handler(CommandHandler("removesub", remove_sub_command))
+    dp.add_handler(CommandHandler("substatus", subscription_status))
