@@ -3,10 +3,11 @@ from telegram import Update, ParseMode
 from telegram.ext import CallbackContext, CommandHandler, Filters
 from database import add_subscription, remove_subscription, is_subscription_active, get_subscription
 from datetime import datetime, timedelta
-from .helpers import owner_only
+from .helpers import owner_only, dev_only
 import config
 
 @owner_only
+@dev_only
 def add_sub_command(update: Update, context: CallbackContext):
     if len(context.args) != 2:
         update.message.reply_text("Cara penggunaan: /addsub <chat_id/username> <durasi_hari>")
@@ -38,6 +39,7 @@ def add_sub_command(update: Update, context: CallbackContext):
                               f"Group ini masih memiliki durasi {duration_days} hari dan akan habis pada tanggal {expiry_date.strftime('%Y-%m-%d %H:%M:%S')}.")
 
 @owner_only
+@dev_only
 def remove_sub_command(update: Update, context: CallbackContext):
     if len(context.args) != 1:
         update.message.reply_text("Cara penggunaan: /removesub <chat_id/username>")
@@ -67,7 +69,16 @@ def subscription_status(update: Update, context: CallbackContext):
         remaining_days = (expiry_date - datetime.now()).days
         update.message.reply_text(f"Subscription Anda masih memiliki durasi {remaining_days} hari dan akan habis pada tanggal {expiry_date.strftime('%Y-%m-%d %H:%M:%S')}.")
     else:
-        update.message.reply_text("Anda tidak memiliki subscription aktif.")
+        update.message.reply_text("Anda tidak memiliki subscription aktif. Bot tidak dapat digunakan sampai subscription diaktifkan oleh owner atau developer.")
+
+def check_subscription(func):
+    def wrapper(update: Update, context: CallbackContext, *args, **kwargs):
+        chat_id = update.effective_chat.id
+        if is_subscription_active(chat_id):
+            return func(update, context, *args, **kwargs)
+        else:
+            update.message.reply_text("Maaf, Anda tidak memiliki subscription aktif. Silakan hubungi owner atau developer untuk mengaktifkan bot.")
+    return wrapper
 
 def setup(dp):
     dp.add_handler(CommandHandler("addsub", add_sub_command))
