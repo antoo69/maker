@@ -11,4 +11,5 @@ def owner_only(func):
             return func(update, context, *args, **kwargs)
         else:
             update.message.reply_text("Anda tidak memiliki izin untuk menggunakan perintah ini.")
+            return  # Menambahkan return untuk menghentikan eksekusi fungsi
     return wrapper
