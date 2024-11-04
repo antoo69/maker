@@ -4,7 +4,7 @@ from telegram.error import BadRequest
 from modules.subscription import is_subscription_active
 import time
 
-bot = Bot('YOUR_BOT_TOKEN')
+bot = Bot('7536984860:AAETJTVKhHAzRAKG8XZjp0gyqjSXuLTp16s')
 
 def mute_user(update: Update, context: CallbackContext):
     if not is_subscription_active(update.effective_user.id):
