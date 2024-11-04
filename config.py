@@ -1,13 +1,13 @@
 # config.py
 
 # Token bot Telegram
-TOKEN = 'MASUKKAN_TOKEN_BOT_ANDA_DI_SINI'
+TOKEN = 'YOUR_BOT_TOKEN_HERE'
 
 # ID pemilik bot
-OWNER_ID = 123456789  # Ganti dengan ID Telegram Anda
+OWNER_ID = 123456789  # Replace with your Telegram ID
 
 # ID pengembang
-DEV_ID = 987654321  # Ganti dengan ID Telegram pengembang
+DEV_ID = 987654321  # Replace with the Telegram ID of the developer
 
 # Pengaturan database (opsional)
 DATABASE_URL = 'sqlite:///bot_database.db'
@@ -21,3 +21,16 @@ ADMIN_IDS = [
 # Pengaturan lainnya
 DEBUG_MODE = False
 MAX_MESSAGES_PER_MINUTE = 60
+
+# Additional settings
+LOGGING_LEVEL = 'INFO'
+LOG_FILE = 'bot.log'
+
+# Telegram API endpoint
+API_ENDPOINT = 'https://api.telegram.org'
+
+# Bot's language
+LANGUAGE = 'en'
+
+# Bot's timezone
+TIMEZONE = 'UTC'
