@@ -53,22 +53,6 @@ def button_handler(update: Update, context: CallbackContext):
         show_manage_menu(query)
     elif query.data == 'subscription':
         show_subscription_menu(query)
-    elif query.data == 'activation':
-        show_activation_info(query)
-    elif query.data == 'pricing':
-        show_pricing_info(query)
-    elif query.data == 'status':
-        show_status_info(query)
-    elif query.data == 'tagall_info':
-        show_tagall_info(query)
-    elif query.data == 'filteruser_info':
-        show_filteruser_info(query)
-    elif query.data == 'blacklistword_info':
-        show_blacklistword_info(query)
-    elif query.data == 'mute_info':
-        show_mute_info(query)
-    elif query.data == 'antiflood_info':
-        show_antiflood_info(query)
     elif query.data == 'back':
         start(update, context)
 
@@ -77,68 +61,5 @@ def setup(dp):
     dp.add_handler(CommandHandler("start", start))
     dp.add_handler(CallbackQueryHandler(button_handler))
 
-# Fungsi untuk menampilkan informasi modul
-def show_activation_info(query):
-    query.edit_message_text(
-        text="🔐 Aktivasi Langganan\n\n"
-             "Perintah:\n/addgc <chat_id> <durasi_hari>\n\nPenjelasan: Owner menambahkan grup ke dalam sistem langganan selama durasi tertentu.\n\n"
-             "Perintah:\n/removegc <chat_id>\n\nPenjelasan: Owner menghapus grup dari sistem langganan.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Kembali", callback_data='subscription')]])
-    )
-
-def show_pricing_info(query):
-    query.edit_message_text(
-        text="💲 Daftar Harga Langganan\n\n"
-             "1. 30 Hari: Rp50.000\n"
-             "2. 60 Hari: Rp90.000\n"
-             "3. 90 Hari: Rp120.000\n\n"
-             "Untuk mengaktifkan langganan, hubungi pemilik bot.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Kembali", callback_data='subscription')]])
-    )
-
-def show_status_info(query):
-    query.edit_message_text(
-        text="📝 Cek Status Langganan\n\n"
-             "Perintah:\n/listgc\n\nPenjelasan: Melihat daftar grup yang aktif berlangganan beserta durasinya.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Kembali", callback_data='subscription')]])
-    )
-
-def show_tagall_info(query):
-    query.edit_message_text(
-        text="🏷️ Tag All\n\n"
-             "Perintah:\n/tagall\n\nPenjelasan: Untuk menandai semua anggota grup.\n\n"
-             "Perintah:\n/cancel\n\nPenjelasan: Untuk membatalkan proses tagall.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Kembali", callback_data='manage')]])
-    )
-
-def show_filteruser_info(query):
-    query.edit_message_text(
-        text="🚫 Filter User\n\n"
-             "Perintah:\n/addblacklist <user_id/username>\n\nPenjelasan: Menambahkan pengguna ke daftar blacklist.\n\n"
-             "Perintah:\n/removeblacklist <user_id/username>\n\nPenjelasan: Menghapus pengguna dari daftar blacklist.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Kembali", callback_data='manage')]])
-    )
-
-def show_blacklistword_info(query):
-    query.edit_message_text(
-        text="📝 Blacklist Word\n\n"
-             "Perintah:\n/addword <kata>\n\nPenjelasan: Menambahkan kata ke daftar blacklist.\n\n"
-             "Perintah:\n/removeword <kata>\n\nPenjelasan: Menghapus kata dari daftar blacklist.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Kembali", callback_data='manage')]])
-    )
-
-def show_mute_info(query):
-    query.edit_message_text(
-        text="🔇 Mute User\n\n"
-             "Perintah:\n/mute <user_id/username>\n\nPenjelasan: Membisukan pengguna tertentu di grup.\n\n"
-             "Perintah:\n/unmute <user_id/username>\n\nPenjelasan: Mengembalikan hak bicara pengguna.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Kembali", callback_data='manage')]])
-    )
-
-def show_antiflood_info(query):
-    query.edit_message_text(
-        text="🚨 Anti Flood\n\n"
-             "Perintah:\n/setflood <jumlah_pesan>\n\nPenjelasan: Mengatur batas maksimal jumlah pesan yang diizinkan dalam waktu singkat.\n\n"
-             "Perintah:\n/unsetflood\n\nPenjelasan: Menonaktifkan pengaturan anti-flood.",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 Kembali", callback_data='manage')]])
-    )
+# Call the setup function
+setup(dp)
