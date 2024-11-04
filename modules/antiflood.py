@@ -1,4 +1,3 @@
-
 from telegram import Update
 from telegram.ext import CallbackContext, CommandHandler, MessageHandler, filters
 import time
@@ -73,3 +72,15 @@ def setup(application):
     application.add_handler(CommandHandler("setflood", set_antiflood, filters.ChatType.GROUPS))
     application.add_handler(CommandHandler("disableflood", disable_antiflood, filters.ChatType.GROUPS))
     application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, check_flood))
+
+if __name__ == '__main__':
+    import logging
+    from telegram.ext import Application
+
+    logging.basicConfig(level=logging.INFO)
+
+    application = Application.builder().token('YOUR_BOT_TOKEN').build()
+
+    setup(application)
+
+    application.run()
