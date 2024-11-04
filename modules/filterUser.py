@@ -1,4 +1,3 @@
-
 from telegram import Update
 from telegram.ext import CallbackContext, CommandHandler, MessageHandler, filters
 from modules.subscription import is_subscription_active
