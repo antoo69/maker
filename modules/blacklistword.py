@@ -1,4 +1,4 @@
-from telegram import Update
+from telegram import Update, Bot, Message
 from telegram.ext import CallbackContext, CommandHandler, MessageHandler, filters
 from modules.subscription import is_subscription_active
 
@@ -34,7 +34,19 @@ def check_blacklist_word(update: Update, context: CallbackContext) -> None:
             except Exception as e:
                 print(f"Gagal menghapus pesan: {e}")
 
-def setup(application):
+def setup(application, bot_token):
+    application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("addblacklistword", add_blacklist_word))
     application.add_handler(CommandHandler("removeblacklistword", remove_blacklist_word))
     application.add_handler(MessageHandler(filters.TEXT & filters.ChatType.GROUPS, check_blacklist_word))
+
+def start_command(update: Update, context: CallbackContext) -> None:
+    update.message.reply_text("Selamat datang! Anda dapat menggunakan perintah /addblacklistword untuk menambahkan kata ke blacklist dan /removeblacklistword untuk menghapus kata dari blacklist.")
+
+def main():
+    application = BotApplication()
+    setup(application, "YOUR_BOT_TOKEN")
+    application.run_polling()
+
+if __name__ == "__main__":
+    main()
