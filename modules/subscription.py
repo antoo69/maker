@@ -13,14 +13,11 @@ def add_sub_command(update: Update, context: CallbackContext):
         update.message.reply_text("Cara penggunaan: /addsub <chat_id/username> <durasi_hari>")
         return
 
-    chat_id_or_username = context.args[0]
-    duration_days = int(context.args[1])
+    chat_id_or_username, duration_days = context.args
 
-    # Cek apakah argumen pertama adalah username atau chat_id
     if chat_id_or_username.isdigit():
         chat_id = int(chat_id_or_username)
     else:
-        # Jika menggunakan username, cari chat_id
         try:
             user = context.bot.get_chat(chat_id_or_username)
             chat_id = user.id
@@ -30,11 +27,9 @@ def add_sub_command(update: Update, context: CallbackContext):
 
     buyer_username = f"@{update.message.from_user.username}" if update.message.from_user.username else "Unknown"
 
-    # Menambahkan langganan dengan durasi yang diberikan
-    add_subscription(chat_id, buyer_username, duration_days)
+    add_subscription(chat_id, buyer_username, int(duration_days))
 
-    # Hitung tanggal kedaluwarsa
-    expiry_date = datetime.now() + timedelta(days=duration_days)
+    expiry_date = datetime.now() + timedelta(days=int(duration_days))
     update.message.reply_text(f"Subscription ditambahkan untuk chat ID {chat_id} selama {duration_days} hari.\n"
                               f"Group ini masih memiliki durasi {duration_days} hari dan akan habis pada tanggal {expiry_date.strftime('%Y-%m-%d %H:%M:%S')}.")
 
@@ -47,7 +42,6 @@ def remove_sub_command(update: Update, context: CallbackContext):
 
     chat_id_or_username = context.args[0]
 
-    # Cek apakah argumen pertama adalah username atau chat_id
     if chat_id_or_username.isdigit():
         chat_id = int(chat_id_or_username)
     else:
@@ -61,6 +55,7 @@ def remove_sub_command(update: Update, context: CallbackContext):
     remove_subscription(chat_id)
     update.message.reply_text(f"Subscription dihapus untuk chat ID {chat_id}.")
 
+@check_subscription
 def subscription_status(update: Update, context: CallbackContext):
     chat_id = update.effective_chat.id
     subscription = get_subscription(chat_id)
