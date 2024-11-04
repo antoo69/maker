@@ -1,11 +1,13 @@
-from telegram import Update, ChatPermissions
+from telegram import Update, ChatPermissions, Bot
 from telegram.ext import CallbackContext, CommandHandler, MessageHandler, filters
 from telegram.error import BadRequest
 from modules.subscription import is_subscription_active
 import time
 
+bot = Bot('YOUR_BOT_TOKEN')
+
 def mute_user(update: Update, context: CallbackContext):
-    if not update.effective_user.id in context.bot_data.get('admin_list', []):
+    if not is_subscription_active(update.effective_user.id):
         update.message.reply_text("Anda tidak memiliki izin untuk menggunakan perintah ini.")
         return
 
@@ -39,7 +41,7 @@ def mute_user(update: Update, context: CallbackContext):
             return
 
     try:
-        context.bot.restrict_chat_member(
+        bot.restrict_chat_member(
             chat_id,
             user_id,
             permissions=ChatPermissions(can_send_messages=False),
@@ -53,7 +55,7 @@ def mute_user(update: Update, context: CallbackContext):
         update.message.reply_text(f"Gagal membisukan pengguna: {str(e)}")
 
 def unmute_user(update: Update, context: CallbackContext):
-    if not update.effective_user.id in context.bot_data.get('admin_list', []):
+    if not is_subscription_active(update.effective_user.id):
         update.message.reply_text("Anda tidak memiliki izin untuk menggunakan perintah ini.")
         return
 
@@ -72,7 +74,7 @@ def unmute_user(update: Update, context: CallbackContext):
         return
 
     try:
-        context.bot.restrict_chat_member(
+        bot.restrict_chat_member(
             chat_id,
             user_id,
             permissions=ChatPermissions(
