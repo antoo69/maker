@@ -2,7 +2,7 @@ from telegram import Update, ParseMode
 from telegram.ext import CallbackContext, CommandHandler, Filters
 import asyncio
 
-# Variabel untuk menyimpan status tagall aktif
+# Variable to store the status of the tagall command
 tagall_active = False
 
 async def delete_pesan_nanti(context: CallbackContext, message_id: int, chat_id: int, delay: int):
@@ -16,54 +16,54 @@ async def tag_semua(update: Update, context: CallbackContext):
     global tagall_active
     tagall_active = True
 
-    obrolan = update.effective_chat
-    id_obrolan = obrolan.id
+    chat = update.effective_chat
+    chat_id = chat.id
 
-    if obrolan.type not in ['group', 'supergroup']:
-        pesan = await update.message.reply_text("Perintah ini hanya bisa digunakan di grup.")
-        await delete_pesan_nanti(context, pesan.message_id, id_obrolan, 5)
+    if chat.type not in ['group', 'supergroup']:
+        await update.message.reply_text("Perintah ini hanya bisa digunakan di grup.")
+        await delete_pesan_nanti(context, update.message.message_id, chat_id, 5)
         return
 
     if not await adalah_admin(update, context):
-        pesan = await update.message.reply_text("Hanya admin yang bisa menggunakan perintah ini.")
-        await delete_pesan_nanti(context, pesan.message_id, id_obrolan, 5)
+        await update.message.reply_text("Hanya admin yang bisa menggunakan perintah ini.")
+        await delete_pesan_nanti(context, update.message.message_id, chat_id, 5)
         return
 
     try:
-        anggota = await context.bot.get_chat_members(id_obrolan)
+        members = await context.bot.get_chat_members(chat_id)
     except Exception as e:
         await update.message.reply_text(f"Gagal mengambil daftar anggota: {str(e)}")
         return
 
-    ukuran_batch = 5
-    mention = []
-    
-    await update.message.reply_text(f"Memulai tag semua di grup: {obrolan.title} (Total anggota: {len(anggota)})")
+    batch_size = 5
+    mentions = []
 
-    for member in anggota:
+    await update.message.reply_text(f"Memulai tag semua di grup: {chat.title} (Total anggota: {len(members)})")
+
+    for member in members:
         if not tagall_active:
             await update.message.reply_text("Tag semua dibatalkan.")
             return
 
-        pengguna = member.user
-        if pengguna.username:
-            mention.append(f"@{pengguna.username}")
+        user = member.user
+        if user.username:
+            mentions.append(f"@{user.username}")
         else:
-            mention.append(f"[{pengguna.first_name}](tg://user?id={pengguna.id})")
+            mentions.append(f"[{user.first_name}](tg://user?id={user.id})")
 
-        if len(mention) == ukuran_batch:
-            pesan = " ".join(mention)
+        if len(mentions) == batch_size:
+            message = " ".join(mentions)
             try:
-                await update.message.reply_text(f"📢 {pesan}", parse_mode=ParseMode.MARKDOWN)
+                await update.message.reply_text(f"📢 {message}", parse_mode=ParseMode.MARKDOWN)
             except Exception:
                 await update.message.reply_text("Gagal mengirim pesan mention.")
-            mention = []
+            mentions = []
             await asyncio.sleep(1)  # Jeda untuk menghindari flood
 
-    if mention:
-        pesan = " ".join(mention)
+    if mentions:
+        message = " ".join(mentions)
         try:
-            await update.message.reply_text(f"📢 {pesan}", parse_mode=ParseMode.MARKDOWN)
+            await update.message.reply_text(f"📢 {message}", parse_mode=ParseMode.MARKDOWN)
         except Exception:
             await update.message.reply_text("Gagal mengirim pesan mention terakhir.")
 
@@ -72,14 +72,14 @@ async def tag_semua(update: Update, context: CallbackContext):
 async def batal_tag_semua(update: Update, context: CallbackContext):
     global tagall_active
     tagall_active = False
-    pesan = await update.message.reply_text("Tag semua dibatalkan.")
-    await delete_pesan_nanti(context, pesan.message_id, update.effective_chat.id, 5)
+    await update.message.reply_text("Tag semua dibatalkan.")
+    await delete_pesan_nanti(context, update.message.message_id, update.effective_chat.id, 5)
 
 async def adalah_admin(update: Update, context: CallbackContext):
     try:
-        id_pengguna = update.effective_user.id
-        anggota_obrolan = await context.bot.get_chat_member(update.effective_chat.id, id_pengguna)
-        return anggota_obrolan.status in ['administrator', 'creator']
+        user_id = update.effective_user.id
+        chat_member = await context.bot.get_chat_member(update.effective_chat.id, user_id)
+        return chat_member.status in ['administrator', 'creator']
     except Exception:
         return False
 
